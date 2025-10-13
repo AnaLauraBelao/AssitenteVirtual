@@ -1,0 +1,7 @@
+{
+  "<channel_id>": {
+    "subscription": "<subscription-id>",
+    "resource_group": "<group-name>",
+    "server_name": "<server-name>"
+  },
+}
