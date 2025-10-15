@@ -43,7 +43,7 @@ async def libera_ip_cmd(
     default_rule = getattr(usuario, "display_name", None) or getattr(usuario, "name", None) or "default"
     rule_name = slugify((regra or default_rule).strip())
     channel = interaction.channel_id
-    await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer()
     response = await libera_ip(
         rule_name=rule_name,
         channel_id=channel,
