@@ -2,4 +2,4 @@ config.json
 channels.json
 .venv
 .idea
-src/utils/database/db.db
+src/utils/database/*.db
