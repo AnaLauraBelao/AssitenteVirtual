@@ -71,27 +71,27 @@ async def create_daily(interaction: discord.Interaction, date):
         note = e.get("note", "")
         start = e.get("startTime", "")
         end = e.get("endTime", "")
+        tags_list = [tag.get("name", "") for tag in e.get("tags", [])]
         tags = ", ".join([tag.get("name", "") for tag in e.get("tags", [])])
         store_time_entrie(start, end, taskId, note)
         if taskId in processed_tasks:
             continue  # pula se já foi processada
         processed_tasks.append(taskId)
-        if "Daily" not in [tag.get("name", "") for tag in e.get("tags", [])]:
-            msg = (
-                f"Projeto: {project}\n"
-                f"Tarefa: {task}\n"
-                f"Nota: {note}\n"
-                f"Tags: {tags}\n"
-                f"Início: {start}\n"
-                f"Fim: {end}\n"
-            )
-            view = StatusView(e)
-            await interaction.edit_original_response(content=msg, view=view)
-            timeout = await view.wait()
-            # Aqui você pode salvar o status selecionado (view.value) conforme necessário
-            if timeout or view.value is None:
-                await interaction.edit_original_response(content="Tempo esgotado ou sem seleção.", view=None)
-                break
+        if any(t in ("Daily", "Não Exibir") for t in tags_list):
+            continue
+        msg = (
+            f"Projeto: {project}\n"
+            f"Tarefa: {task}\n"
+            f"Nota: {note}\n"
+            f"Tags: {tags}\n"
+        )
+        view = StatusView(e)
+        await interaction.edit_original_response(content=msg, view=view)
+        timeout = await view.wait()
+        # Aqui você pode salvar o status selecionado (view.value) conforme necessário
+        if timeout or view.value is None:
+            await interaction.edit_original_response(content="Tempo esgotado ou sem seleção.", view=None)
+            break
 
 
 from datetime import datetime, timedelta
