@@ -66,9 +66,6 @@ class ActivitiesSelect(discord.ui.Select):
             'name': selected_name,
         })
 
-
-        pprint(view.selected_tasks)
-
         # view.selected_tasks[task['included']['projects']] =
 
         # Remove dos disponíveis
@@ -161,12 +158,10 @@ class ActivitiesView(discord.ui.View):
 
         text = "".join(text_parts)
 
-        alter_cell_text(name=self.planning_name, text=text, text_format_runs=text_format_runs, weekday=self.day_value)
-
         # Mostra o resultado ao usuário
         await interaction.response.edit_message(
             content=(
-                "Finalizado.\n"
+                alter_cell_text(name=self.planning_name, text=text, text_format_runs=text_format_runs, weekday=self.day_value)
             ),
             view=None
         )

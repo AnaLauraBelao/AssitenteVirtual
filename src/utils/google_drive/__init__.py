@@ -15,26 +15,6 @@ spreadsheet = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
 first_sheet_id = spreadsheet["sheets"][0]["properties"]["sheetId"]
 first_sheet_title = spreadsheet["sheets"][0]["properties"]["title"]
 
-nome = "Ana"
-text = (
-    "Projeto de teste123\n"
-    "- 43778705 - Pedido de Venda - Editar\n"
-    "- 43778708 - Pedido de Venda - Cancelar\n"
-    "- 43778714 - Pedido de Venda - Envio para Produção\n"
-    "- Atualizar o ambiente de produção com as atividades finalizadas"
-)
-LINK1 = "https://exemplo.com/link1"
-LINK2 = "https://exemplo.com/link2"
-LINK3 = "https://exemplo.com/link3"
-LINK4 = "https://exemplo.com/link4"
-text_format_runs = [
-    {"startIndex": 0, "format": {"bold": True}},  # "Morota"
-    {"startIndex": text.find("43778705"), "format": {"link": {"uri": LINK1}}},
-    {"startIndex": text.find("43778708"), "format": {"link": {"uri": LINK2}}},
-    {"startIndex": text.find("43778714"), "format": {"link": {"uri": LINK3}}},
-    {"startIndex": text.find("Atualizar"), "format": {"link": {"uri": LINK4}}}
-]
-
 def get_first_sheet_id():
     meta = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
     return meta["sheets"][0]["properties"]["sheetId"]
@@ -127,6 +107,6 @@ def alter_cell_text(name, text, text_format_runs, weekday):
         body=body
     ).execute()
 
-    return f"✅ Planning atualizada para {nome} ({datetime.datetime.now():%A}) com sucesso!"
+    return f"✅ Planning atualizada para {name} ({weekday.capitalize()}) com sucesso!"
 
 # alter_cell_text(sheet_id, row, col, text, text_format_runs)
