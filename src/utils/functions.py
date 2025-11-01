@@ -2,15 +2,18 @@ from pprint import pprint
 
 from src.enum.status_tarefa import StatusAtividade
 from src.utils.azure import libera_ip as libera_ip_azure
-from src.utils.teamwork import store_time_entrie
+from src.utils.teamwork import store_time_entrie, get_week_tasks_by_user
+from src.utils.teamwork.api import get_user_by_email
 from src.utils.tmetric import get_daily_entries
-from src.utils.database import Channels, Servers, ResourceGroups, Subscriptions, Rules, Atividades, Projetos
+from src.utils.database import Channels, Servers, ResourceGroups, Subscriptions, Rules, Atividades, Projetos, Users
 from pony.orm import db_session, select
 from datetime import datetime, timedelta
 import re
 import unicodedata
 import discord
+from src.views.planning_view import ActivitiesView
 from src.views.status_view import StatusView
+import pandas as pd
 
 
 async def libera_ip(rule_name: str, channel_id: str, env: str, ip: str):
@@ -93,10 +96,6 @@ async def create_daily(interaction: discord.Interaction, date):
             await interaction.edit_original_response(content="Tempo esgotado ou sem seleção.", view=None)
             break
 
-
-from datetime import datetime, timedelta
-from pony.orm import db_session, select
-
 def create_weekly_report():
     hoje = datetime.now()
     inicio_semana = (hoje - timedelta(days=hoje.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -131,9 +130,74 @@ def create_weekly_report():
 
     return mensagens if mensagens else "Nenhuma atividade registrada na semana."
 
+def create_link_user(email: str, name: str, discord_user_id: str):
+    pattern = r"^[a-zA-Z0-9_.+-]+@esfera\.com\.br$"
+    if not isinstance(email, str) or not re.match(pattern, email):
+        return "E-mail inválido: forneça um e-mail válido do domínio @esfera.com.br."
+
+    with db_session:
+        user = select(u for u in Users if u.discord_id == discord_user_id or u.email == email).first()
+        if user:
+            if user.email == email:
+                return f"E-mail {email} já está vinculado no TeamWork."
+            elif user.discord_id == discord_user_id:
+                return f"Usuário do Discord já está vinculado com o e-mail {user.email}."
+            return "Não foi possível vincular: conflito de usuário existente."
+        else:
+            user = get_user_by_email(email)
+            if user:
+                Users(
+                    discord_id=str(discord_user_id),
+                    email=email,
+                    teamwork_user_id=user.get("id") if user else None,
+                    name=user.get("firstName") + " " + user.get("lastName") if user else None,
+                    planning_name=name
+                )
+            else:
+                return f"Usuário com e-mail {email} não encontrado no TeamWork."
+
+    return f"Usuário TeamWork {email} vinculado com sucesso com usuário Discord."
+
+async def create_planning_daily(interaction: discord.Interaction, day_value: str, day_name):
+    with db_session:
+        user = select(u for u in Users if u.discord_id == str(interaction.user.id)).first()
+        if not user:
+            await interaction.edit_original_response(content="Não foi possível encontrar o usuário vinculado no TeamWork. Use o comando /link_user para vincular seu e-mail.")
+            return
+
+    activities = get_week_tasks_by_user(user.name)['tasks']
+    filtered_activities = pd.DataFrame(activities).filter(items=["id", "name"]).to_dict(orient="records")
+
+    # Exemplo de atividades. Substitua por sua fonte real.
+    # activities = [
+    #     {"id": 101, "name": "Planejamento"},
+    #     {"id": 102, "name": "Desenvolvimento"},
+    #     {"id": 103, "name": "Code Review"},
+    #     {"id": 104, "name": "Testes"}
+    # ]
+    #
+    view = ActivitiesView(author_id=interaction.user.id, activities=filtered_activities, planning_name=user.planning_name, day_value=day_value)
+    await interaction.edit_original_response(content="Selecione uma atividade no combobox. Clique em Finalizar quando terminar.", view=view)
+    # await interaction.edit_original_response(
+    #     content="Selecione uma atividade no combobox. Clique em Finalizar quando terminar.",
+    #     view=view,
+    # )
+    # await interaction.edit_original_response(content=f"Planning de {day_name} para o usuário {user.name} (ID TeamWork: {user.teamwork_user_id}) ainda não implementada.")
+
 def slugify(value: str) -> str:
     value = unicodedata.normalize('NFKD', value)
     value = value.encode('ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s-]', '', value.lower())
     value = re.sub(r'[\s_-]+', '-', value).strip('-')
     return value
+
+def weekday_default_ptbr_no_feira(dt: datetime | None = None) -> str:
+    d = dt or datetime.now()
+    mapping_value = {
+        0: "segunda",
+        1: "terça",
+        2: "quarta",
+        3: "quinta",
+        4: "sexta",
+    }
+    return mapping_value.get(d.weekday(), "segunda")

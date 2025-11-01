@@ -70,5 +70,13 @@ class Rules(db.Entity):
     env = Optional(str)
     description = Optional(str)
 
+class Users(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    discord_id = Required(str, unique=True)
+    teamwork_user_id = Required(int, unique=True)
+    email = Required(str, unique=True)
+    name = Required(str)
+    planning_name = Required(str)
+
 
 db.generate_mapping(create_tables=True)

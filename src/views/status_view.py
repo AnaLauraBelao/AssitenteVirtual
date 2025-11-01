@@ -37,7 +37,6 @@ def save_or_update_atividade(id_tmetric, id_teamwork, id_projeto_tmetric, nome_t
     from src.utils.database import Atividades, Projetos  # Importe as entidades corretas
     with db_session:
         atividade = select(a for a in Atividades if a.id_teamwork == id_teamwork).first()
-        pprint(atividade)
         if atividade:
             atividade.status = status
             atividade.data = data

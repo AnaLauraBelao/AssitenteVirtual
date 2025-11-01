@@ -1,9 +1,12 @@
+from typing import Optional
+
 import discord
 from discord import app_commands
 
+from src.utils.functions import libera_ip, slugify, create_daily, create_weekly_report, create_link_user, \
+    weekday_default_ptbr_no_feira, create_planning_daily
 from src.utils.infisical import get_secret
-from src.utils.functions import libera_ip, slugify, create_daily, create_weekly_report
-from typing import Optional
+from src.views.planning_view import ActivitiesView
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -64,6 +67,17 @@ async def daily(interaction: discord.Interaction, date: Optional[str] = None):
     await create_daily(interaction, date)
 
 
+@tree.command(name="link_user", description="Vincula o usuário no discord com o usuário no TeamWork", guild=discord.Object(id=get_secret("DISCORD_GUILD_ID")))
+@discord.app_commands.describe(
+    email="E-mail cadastrado no TeamWork.",
+    name="Nome na linha da Planning"
+)
+async def link_user(interaction: discord.Interaction, email: str, name: str):
+    await interaction.response.defer(ephemeral=True)
+    mensagens = create_link_user(email, name, interaction.user.id)
+    await interaction.edit_original_response(content=mensagens)
+
+
 @tree.command(name="weekly_report", description="Mostra os registros da semana", guild=discord.Object(id=get_secret("DISCORD_GUILD_ID")))
 async def weekly_report(interaction: discord.Interaction):
     if interaction.user.id != int(get_secret("DISCORD_USER_ID")):
@@ -76,6 +90,68 @@ async def weekly_report(interaction: discord.Interaction):
     canal = client.get_channel(int(get_secret("DISCORD_CHANNEL_ID")))
     await canal.send(mensagens)
     await interaction.edit_original_response(content="Relatório gerado com sucesso")
+
+@tree.command(
+    name="planning_daily",
+    description="Monta a planning do dia selecionado, caso não seja selecionado nenhum dia, monta a do dia atual.",
+    guild=discord.Object(id=get_secret("DISCORD_GUILD_ID"))
+)
+@app_commands.choices(
+    week_day=[
+        app_commands.Choice(name="Segunda-Feira", value="segunda"),
+        app_commands.Choice(name="Terça-Feira", value="terça"),
+        app_commands.Choice(name="Quarta-Feira", value="quarta"),
+        app_commands.Choice(name="Quinta-Feira", value="quinta"),
+        app_commands.Choice(name="Sexta-Feira", value="sexta"),
+    ]
+)
+@discord.app_commands.describe(
+    week_day="Dia da semana para montar a planning do dia."
+)
+async def planning_daily(interaction: discord.Interaction, week_day: Optional[app_commands.Choice[str]] = None):
+    if week_day is None:
+        dia_value = weekday_default_ptbr_no_feira()
+        dia_name = {
+            "segunda": "Segunda-Feira",
+            "terça": "Terça-Feira",
+            "quarta": "Quarta-Feira",
+            "quinta": "Quinta-Feira",
+            "sexta": "Sexta-Feira"
+        }[dia_value]
+    else:
+        dia_value = week_day.value
+        dia_name = week_day.name
+
+    await interaction.response.defer(ephemeral=True)
+    await create_planning_daily(interaction, dia_value, dia_name)
+
+
+@tree.command(
+    name="selecionar_atividade",
+    description="Selecione uma atividade diretamente no parâmetro do comando.",
+    guild=discord.Object(id=get_secret("DISCORD_GUILD_ID"))
+)
+@app_commands.describe(atividade="Escolha uma atividade")
+@app_commands.choices(
+    atividade=[
+        app_commands.Choice(name="Segunda-Feira", value="segunda"),
+        app_commands.Choice(name="Terça-Feira", value="terça"),
+        app_commands.Choice(name="Quarta-Feira", value="quarta"),
+        app_commands.Choice(name="Quinta-Feira", value="quinta"),
+        app_commands.Choice(name="Sexta-Feira", value="sexta"),
+    ]
+)
+async def selecionar_atividade(
+        interaction: discord.Interaction,
+        atividade: app_commands.Choice[str],
+):
+    atividade_id = atividade.value          # "101", "102", ...
+    atividade_nome = atividade.name         # "Planejamento", ...
+    await interaction.response.send_message(
+        f"Você selecionou: {atividade_nome} (id: {atividade_id})",
+        ephemeral=True
+    )
+
 
 
 # @client.event
